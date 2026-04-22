@@ -1,0 +1,28 @@
+{
+  "id": "785a15cf-e2c3-4ea9-9f52-9df969f34a53",
+  "filename": "785a15cf-e2c3-4ea9-9f52-9df969f34a53.pdf",
+  "original_filename": "1001-8042-30-10-002.pdf",
+  "type": "document",
+  "url": null,
+  "file_path": "2026-04-22\\documents\\785a15cf-e2c3-4ea9-9f52-9df969f34a53.pdf",
+  "file_size": 2006871,
+  "mime_type": "application/pdf",
+  "summary": "RF信号检测在低频射频系统中的应用",
+  "description": "本文探讨了低频射频系统中RF振幅和相位的检测技术，重点介绍了数字LLRF系统中的采样策略和数字解调算法，并分析了基于瑞士FEL测量的结果。",
+  "keywords": [
+    "低频射频系统",
+    "RF检测",
+    "采样策略",
+    "数字解调算法"
+  ],
+  "highlights": [
+    "RF信号检测的重要性",
+    "数字LLRF系统的应用"
+  ],
+  "og_image": null,
+  "favicon_url": null,
+  "created_at": "2026-04-22T09:48:20.396992",
+  "analyzed_at": "2026-04-22T09:48:31.117883",
+  "status": "ready",
+  "error": null
+}

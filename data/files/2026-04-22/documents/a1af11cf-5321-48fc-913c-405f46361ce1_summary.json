@@ -1,0 +1,28 @@
+{
+  "id": "a1af11cf-5321-48fc-913c-405f46361ce1",
+  "filename": "a1af11cf-5321-48fc-913c-405f46361ce1.pdf",
+  "original_filename": "SXFEL装置上基于LLRF控制系统的速调管输入输出特性曲线的线性化_孙思思.pdf",
+  "type": "document",
+  "url": null,
+  "file_path": "2026-04-22\\documents\\a1af11cf-5321-48fc-913c-405f46361ce1.pdf",
+  "file_size": 7478313,
+  "mime_type": "application/pdf",
+  "summary": "SXFEL装置速调管输入输出特性曲线线性化研究",
+  "description": "本文研究SXFEL装置中速调管放大器的非线性特性，并提出基于FPGA的线性化算法，以提高微波低电平控制系统的精度。",
+  "keywords": [
+    "速调管",
+    "线性化",
+    "SXFEL",
+    "查找表"
+  ],
+  "highlights": [
+    "基于FPGA的线性化算法",
+    "提高微波低电平控制系统精度"
+  ],
+  "og_image": null,
+  "favicon_url": null,
+  "created_at": "2026-04-22T09:48:31.231882",
+  "analyzed_at": "2026-04-22T09:48:42.497429",
+  "status": "ready",
+  "error": null
+}

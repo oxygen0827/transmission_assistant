@@ -1,0 +1,25 @@
+{
+  "id": "1ea76076-5230-4639-bdd8-1b4e56d546b4",
+  "filename": "1ea76076-5230-4639-bdd8-1b4e56d546b4.pdf",
+  "original_filename": "fu2021.pdf",
+  "type": "document",
+  "url": null,
+  "file_path": "2026-04-20\\documents\\1ea76076-5230-4639-bdd8-1b4e56d546b4.pdf",
+  "file_size": 4202708,
+  "mime_type": "application/pdf",
+  "summary": "中国原子能院设计高电流回旋加速器BNCT系统LLRF控制器。",
+  "description": "介绍了中国原子能院构建的高电流回旋加速器BNCT系统，及其基于FPGA的LLRF控制系统设计和实现。",
+  "keywords": [
+    "BNCT系统",
+    "LLRF控制器",
+    "高电流回旋加速器"
+  ],
+  "highlights": [
+    "高功率、灵活可靠的实时LLRF系统设计",
+    "基于FPGA的控制器应用"
+  ],
+  "created_at": "2026-04-20T22:21:43.768736",
+  "analyzed_at": "2026-04-20T22:35:29.316524",
+  "status": "ready",
+  "error": "Connection error."
+}

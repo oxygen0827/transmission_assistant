@@ -1,0 +1,31 @@
+{
+  "id": "5d33651e-0030-472e-adf3-f2cbde5b9636",
+  "filename": "5d33651e-0030-472e-adf3-f2cbde5b9636.pdf",
+  "original_filename": "1.pdf",
+  "type": "document",
+  "url": null,
+  "file_path": "2026-04-22\\documents\\5d33651e-0030-472e-adf3-f2cbde5b9636.pdf",
+  "file_size": 903010,
+  "mime_type": "application/pdf",
+  "summary": "MTCA.4架构下基于LLRF控制系统的RF背板设计",
+  "description": "本文介绍了基于MTCA.4架构的LLRF控制系统，该系统集成了高精度模拟电子和数字处理单元，并设计了一种独特的RF背板以提高系统可靠性和可维护性。",
+  "keywords": [
+    "LLRF控制系统",
+    "MTCA.4架构",
+    "RF背板",
+    "超导加速器",
+    "自由电子激光器"
+  ],
+  "highlights": [
+    "MTCA.4架构",
+    "高精度检测",
+    "RF背板设计",
+    "系统可靠性"
+  ],
+  "og_image": null,
+  "favicon_url": null,
+  "created_at": "2026-04-22T09:48:05.570258",
+  "analyzed_at": "2026-04-22T09:48:13.606430",
+  "status": "ready",
+  "error": null
+}

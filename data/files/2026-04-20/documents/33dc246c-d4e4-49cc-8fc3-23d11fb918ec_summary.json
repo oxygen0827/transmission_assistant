@@ -1,0 +1,28 @@
+{
+  "id": "33dc246c-d4e4-49cc-8fc3-23d11fb918ec",
+  "filename": "33dc246c-d4e4-49cc-8fc3-23d11fb918ec.pdf",
+  "original_filename": "2.pdf",
+  "type": "document",
+  "url": null,
+  "file_path": "2026-04-20\\documents\\33dc246c-d4e4-49cc-8fc3-23d11fb918ec.pdf",
+  "file_size": 1175035,
+  "mime_type": "application/pdf",
+  "summary": "LLRF系统结合前馈控制和矢量调制",
+  "description": "本文介绍了一种结合前馈控制和矢量调制的LLRF系统，旨在提供高精度RF驱动信号，以实现脉冲的相位和幅度调整，提高射频信号稳定性。",
+  "keywords": [
+    "LLRF",
+    "前馈控制",
+    "矢量调制",
+    "射频信号",
+    "稳定性"
+  ],
+  "highlights": [
+    "高精度RF驱动信号",
+    "相位和幅度调整",
+    "长期工作稳定性"
+  ],
+  "created_at": "2026-04-20T22:25:07.484200",
+  "analyzed_at": "2026-04-20T22:34:35.239742",
+  "status": "ready",
+  "error": "Connection error."
+}

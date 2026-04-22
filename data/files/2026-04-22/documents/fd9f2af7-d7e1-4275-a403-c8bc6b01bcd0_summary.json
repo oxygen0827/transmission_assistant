@@ -1,0 +1,30 @@
+{
+  "id": "fd9f2af7-d7e1-4275-a403-c8bc6b01bcd0",
+  "filename": "fd9f2af7-d7e1-4275-a403-c8bc6b01bcd0.pdf",
+  "original_filename": "2.pdf",
+  "type": "document",
+  "url": null,
+  "file_path": "2026-04-22\\documents\\fd9f2af7-d7e1-4275-a403-c8bc6b01bcd0.pdf",
+  "file_size": 1175035,
+  "mime_type": "application/pdf",
+  "summary": "设计了一种集成了前馈控制和矢量调制的低频射频系统。",
+  "description": "本文介绍了一种基于前馈控制和矢量调制的低频射频系统，用于提供高精度射频驱动信号，并验证了其在S波段高功率测试台上的长期工作稳定性。",
+  "keywords": [
+    "低频射频系统",
+    "前馈控制",
+    "矢量调制",
+    "高精度射频驱动信号",
+    "长期工作稳定性"
+  ],
+  "highlights": [
+    "高精度射频信号生成",
+    "前馈控制与矢量调制集成",
+    "S波段高功率测试台验证"
+  ],
+  "og_image": null,
+  "favicon_url": null,
+  "created_at": "2026-04-22T09:48:13.654959",
+  "analyzed_at": "2026-04-22T09:48:20.340915",
+  "status": "ready",
+  "error": null
+}
