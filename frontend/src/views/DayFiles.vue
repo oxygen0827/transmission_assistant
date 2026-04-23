@@ -35,7 +35,7 @@
           <!-- Link -->
           <template v-else-if="f.type === 'link'">
             <div class="dc-link-cover">
-              <img v-if="f.og_image" :src="f.og_image" class="dc-img" loading="lazy" @error="e => e.target.style.display='none'" />
+              <img v-if="f.og_image" :src="imgUrl(f.og_image)" class="dc-img" loading="lazy" @error="e => e.target.style.display='none'" />
               <template v-else>
                 <img v-if="f.favicon_url" :src="f.favicon_url" class="dc-fav" loading="lazy" @error="e => e.target.style.display='none'" />
                 <span v-else class="dc-icon">🔗</span>
@@ -89,7 +89,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getFiles } from '../api/files'
+import { getFiles, imgUrl } from '../api/files'
 
 const route = useRoute()
 const router = useRouter()

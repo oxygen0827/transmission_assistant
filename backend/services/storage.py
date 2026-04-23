@@ -30,6 +30,7 @@ def get_type_dir(file_type: FileType) -> str:
         FileType.document: "documents",
         FileType.audio: "audios",
         FileType.link: "links",
+        FileType.text: "texts",
         FileType.other: "others",
     }.get(file_type, "others")
 
@@ -61,6 +62,30 @@ def save_file(content: bytes, original_filename: str, mime_type: str = "") -> Fi
         file_size=len(content),
         mime_type=mime_type,
         status=FileStatus.pending,
+    )
+    save_meta(meta)
+    return meta
+
+
+def save_text(content: str) -> FileSummary:
+    file_id = str(uuid.uuid4())
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    dir_path = get_storage_path(date_str, FileType.text)
+    txt_file = dir_path / f"{file_id}.txt"
+
+    with open(txt_file, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    meta = FileSummary(
+        id=file_id,
+        filename=f"{file_id}.txt",
+        original_filename=content[:50] + ("…" if len(content) > 50 else ""),
+        type=FileType.text,
+        file_path=str(txt_file.relative_to(DATA_DIR)),
+        file_size=len(content.encode("utf-8")),
+        mime_type="text/plain",
+        summary=content,
+        status=FileStatus.ready,
     )
     save_meta(meta)
     return meta

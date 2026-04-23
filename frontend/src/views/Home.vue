@@ -95,7 +95,7 @@
                   @click="handleCardClick(f)"
                 >
                   <div class="fm-link-preview" :class="linkBgClass(f)">
-                    <img v-if="f.og_image" :src="f.og_image" class="link-og-img" loading="lazy" @error="e => e.target.style.display='none'" />
+                    <img v-if="f.og_image" :src="imgUrl(f.og_image)" class="link-og-img" loading="lazy" @error="e => e.target.style.display='none'" />
                     <template v-else>
                       <img v-if="f.favicon_url" :src="f.favicon_url" class="link-fav-big" loading="lazy" @error="e => e.target.style.display='none'" />
                       <span v-else style="font-size:26px">🔗</span>
@@ -109,6 +109,17 @@
                     </div>
                     <div v-if="f.summary" class="fm-link-summary">{{ f.summary }}</div>
                   </div>
+                </div>
+              </template>
+
+              <!-- Text bubble -->
+              <template v-else-if="f.type === 'text'">
+                <div
+                  class="fm-text-bubble"
+                  :style="{ transform: `translateX(${swipe[f.id] || 0}px)` }"
+                  @click="$router.push(`/file/${f.id}`)"
+                >
+                  {{ f.summary }}
                 </div>
               </template>
 
@@ -247,7 +258,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, reactive, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { getFiles, uploadFile, uploadLink, deleteFile, getStats } from '../api/files'
+import { getFiles, uploadFile, uploadLink, uploadText, deleteFile, getStats, imgUrl } from '../api/files'
 import { useTheme } from '../composables/useTheme'
 
 const { theme, toggle: toggleTheme } = useTheme()
@@ -462,8 +473,22 @@ async function handlePaste(e) {
 async function submitText() {
   const val = textInput.value.trim(); if (!val) return
   textInput.value = ''
-  if (val.startsWith('http://') || val.startsWith('https://')) await doUpload(null, val)
-  else await doUpload(null, val)
+  if (val.startsWith('http://') || val.startsWith('https://')) {
+    await doUpload(null, val)
+  } else {
+    uploading.value = true
+    uploadToast.value = '发送中…'
+    try {
+      await uploadText(val)
+      await loadFiles()
+      uploadToast.value = '✓ 发送成功'
+      setTimeout(() => { feedEl.value?.scrollTo({ top: feedEl.value.scrollHeight, behavior: 'smooth' }) }, 100)
+    } catch (e) {
+      uploadToast.value = `✗ ${e.response?.data?.detail || e.message}`
+    }
+    uploading.value = false
+    setTimeout(() => { uploadToast.value = '' }, 2200)
+  }
 }
 
 async function doUpload(file, url) {
@@ -643,6 +668,15 @@ async function doDelete() {
 }
 
 /* ── Link card ── */
+.fm-text-bubble {
+  max-width: 248px; background: var(--accent);
+  color: #fff; border-radius: 14px 14px 4px 14px;
+  padding: 10px 14px; font-size: 14px; line-height: 1.55;
+  white-space: pre-wrap; word-break: break-all;
+  cursor: pointer; position: relative; z-index: 1;
+  transition: transform .3s cubic-bezier(.32,.72,0,1);
+}
+.fm-text-bubble:active { transform: scale(.97); }
 .fm-link-card {
   max-width: 248px; background: var(--s2);
   border: 1px solid var(--border); border-radius: 14px; overflow: hidden;

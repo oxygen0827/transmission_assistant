@@ -140,6 +140,9 @@ const SvgOther = () => h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'c
   h('line', { x1: '12', y1: '12', x2: '12', y2: '16' }),
   h('line', { x1: '10', y1: '14', x2: '14', y2: '14' }),
 ])
+const SvgText = () => h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+  h('path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' }),
+])
 
 const CATS = [
   { type: 'image',    label: '图片', svg: SvgImage },
@@ -147,6 +150,7 @@ const CATS = [
   { type: 'document', label: '文档', svg: SvgDoc   },
   { type: 'audio',    label: '音频', svg: SvgAudio },
   { type: 'link',     label: '链接', svg: SvgLink  },
+  { type: 'text',     label: '文字', svg: SvgText  },
   { type: 'other',    label: '其他', svg: SvgOther },
 ]
 
@@ -247,6 +251,7 @@ onMounted(async () => {
 .cat-tile.document { border-color: rgba(94,234,181,.22);  }
 .cat-tile.audio    { border-color: rgba(255,170,92,.22);  }
 .cat-tile.link     { border-color: rgba(100,170,255,.22); }
+.cat-tile.text     { border-color: rgba(139,114,255,.22); }
 .cat-tile.other    { border-color: var(--border2);        }
 
 .tile-glow {
@@ -258,6 +263,7 @@ onMounted(async () => {
 .cat-tile.document .tile-glow { background: radial-gradient(circle, rgba(94,234,181,.4)  0%, transparent 70%); }
 .cat-tile.audio    .tile-glow { background: radial-gradient(circle, rgba(255,170,92,.4)  0%, transparent 70%); }
 .cat-tile.link     .tile-glow { background: radial-gradient(circle, rgba(100,170,255,.4) 0%, transparent 70%); }
+.cat-tile.text     .tile-glow { background: radial-gradient(circle, rgba(139,114,255,.4) 0%, transparent 70%); }
 .cat-tile.other    .tile-glow { background: radial-gradient(circle, rgba(180,180,200,.3) 0%, transparent 70%); }
 
 .tile-ico { width: 50px; height: 50px; border-radius: 16px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
