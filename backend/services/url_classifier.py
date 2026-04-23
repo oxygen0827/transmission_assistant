@@ -111,11 +111,224 @@ async def fetch_linkbox(url: str) -> dict | None:
         return None  # fall through to built-in parser
 
 
+async def extract_wechat_markdown(url: str) -> dict:
+    """Fetch WeChat article and return full content as markdown.
+    Returns {"title", "author", "pub_time", "markdown"}.
+    """
+    headers = {
+        "User-Agent": _WX_UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+        "Referer": "https://mp.weixin.qq.com/",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=25, follow_redirects=True, headers=headers) as client:
+            r = await client.get(url)
+            html = r.text
+    except Exception as e:
+        return {"error": f"请求失败: {e}"}
+
+    try:
+        soup = _bs(html)
+    except Exception as e:
+        return {"error": f"解析失败: {e}"}
+
+    for sel in ["script", "style", "svg", ".qr_code_pc_outer", ".tips_global",
+                ".weapp_text_link", "#js_pc_qr_code", ".rich_media_tool",
+                ".Reward", ".FollowButton"]:
+        for el in soup.select(sel):
+            el.decompose()
+
+    title = (
+        _text(soup.select_one("#activity-name"))
+        or _text(soup.select_one(".rich_media_title"))
+        or _meta(html, "og:title")
+        or "微信文章"
+    )
+    author = _text(soup.select_one("#js_name")) or ""
+    pub_time = _text(soup.select_one("#publish_time")) or ""
+    if not pub_time:
+        metas = soup.select(".rich_media_meta_text")
+        if metas:
+            pub_time = _text(metas[-1])
+
+    # Try to get content from #js_content, resolve data-src → src
+    content_el = soup.select_one("#js_content")
+
+    # Fallback: JsDecode
+    if not content_el or not content_el.get_text(strip=True):
+        for pattern in [
+            r'\bcontent_noencode\s*:\s*JsDecode\([\'"]([^\'"]+)[\'"]\)',
+            r'\bcontent\s*:\s*JsDecode\([\'"]([^\'"]+)[\'"]\)',
+        ]:
+            m = re.search(pattern, html)
+            if m:
+                decoded_html = _jsdecode(m.group(1))
+                try:
+                    content_el = _bs(f"<div>{decoded_html}</div>")
+                except Exception:
+                    pass
+                break
+
+    if not content_el:
+        return {"error": "无法提取文章正文"}
+
+    # Resolve lazy-loaded images
+    for img in content_el.find_all("img", attrs={"data-src": True}):
+        img["src"] = img["data-src"]
+        img.attrs = {"src": img["data-src"]}  # strip other attrs
+
+    # Convert to markdown via simple traversal
+    md = _html_to_markdown(content_el)
+
+    return {
+        "title": title,
+        "author": author,
+        "pub_time": pub_time,
+        "markdown": md.strip(),
+    }
+
+
+def _html_to_markdown(el) -> str:
+    """Simple recursive HTML→Markdown converter for WeChat article content."""
+    from bs4 import NavigableString, Tag
+
+    def walk(node, depth=0) -> str:
+        if isinstance(node, NavigableString):
+            t = str(node)
+            return t if t.strip() else (" " if t else "")
+
+        if not isinstance(node, Tag):
+            return ""
+
+        tag = node.name.lower() if node.name else ""
+        children = "".join(walk(c, depth) for c in node.children)
+        children = children.strip()
+
+        if tag in ("script", "style", "svg"):
+            return ""
+        if tag in ("p", "div", "section"):
+            return f"\n\n{children}\n\n" if children else ""
+        if tag == "br":
+            return "\n"
+        if tag == "h1":
+            return f"\n\n# {children}\n\n"
+        if tag == "h2":
+            return f"\n\n## {children}\n\n"
+        if tag == "h3":
+            return f"\n\n### {children}\n\n"
+        if tag in ("h4", "h5", "h6"):
+            return f"\n\n#### {children}\n\n"
+        if tag == "strong" or tag == "b":
+            return f"**{children}**" if children else ""
+        if tag == "em" or tag == "i":
+            return f"*{children}*" if children else ""
+        if tag == "blockquote":
+            lines = children.splitlines()
+            return "\n" + "\n".join(f"> {l}" for l in lines) + "\n"
+        if tag == "ul":
+            items = [f"- {walk(li).strip()}" for li in node.find_all("li", recursive=False)]
+            return "\n" + "\n".join(items) + "\n"
+        if tag == "ol":
+            items = [f"{i+1}. {walk(li).strip()}" for i, li in enumerate(node.find_all("li", recursive=False))]
+            return "\n" + "\n".join(items) + "\n"
+        if tag == "li":
+            return children
+        if tag == "a":
+            href = node.get("href", "")
+            if href and children:
+                return f"[{children}]({href})"
+            return children
+        if tag == "img":
+            src = node.get("src") or node.get("data-src") or ""
+            alt = node.get("alt") or node.get("data-alt") or ""
+            if src:
+                # Route through image proxy
+                proxied = f"/api/image-proxy?url={src}"
+                return f"\n\n![{alt}]({proxied})\n\n"
+            return ""
+        if tag == "code":
+            return f"`{children}`"
+        if tag == "pre":
+            return f"\n\n```\n{children}\n```\n\n"
+        if tag == "hr":
+            return "\n\n---\n\n"
+        if tag == "span":
+            return children
+        return children
+
+    result = walk(el)
+    # Collapse excessive blank lines
+    result = re.sub(r"\n{3,}", "\n\n", result)
+    return result.strip()
+
+
 def _favicon_for(url: str) -> str:
     parsed = urlparse(url)
     if "weixin.qq.com" in parsed.netloc:
         return "https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico"
     return f"{parsed.scheme}://{parsed.netloc}/favicon.ico"
+
+
+def _jsdecode(encoded: str) -> str:
+    """Decode WeChat's JsDecode-encoded content (hex escapes + HTML entities)."""
+    s = re.sub(r"\\x([0-9a-fA-F]{2})", lambda m: chr(int(m.group(1), 16)), encoded)
+    s = (s.replace("&lt;", "<").replace("&gt;", ">")
+          .replace("&quot;", '"').replace("&#39;", "'")
+          .replace("&amp;", "&").replace("&nbsp;", " "))
+    return s
+
+
+def _extract_wechat_content(html: str, soup) -> str:
+    """Extract article body text from WeChat HTML.
+
+    Tries #js_content first; falls back to JsDecode-encoded payload in <script>.
+    Also resolves data-src lazy images so they're counted in the text.
+    """
+    content_el = soup.select_one("#js_content")
+    if content_el:
+        # Resolve lazy-loaded images: replace data-src with src
+        for img in content_el.find_all("img", attrs={"data-src": True}):
+            img["src"] = img["data-src"]
+        text = content_el.get_text("\n", strip=True)
+        if text.strip():
+            return text.strip()
+
+    # Fallback: decode JsDecode payload from inline script
+    for pattern in [
+        r'\bcontent_noencode\s*:\s*JsDecode\([\'"]([^\'"]+)[\'"]\)',
+        r'\bcontent\s*:\s*JsDecode\([\'"]([^\'"]+)[\'"]\)',
+    ]:
+        m = re.search(pattern, html)
+        if m:
+            decoded_html = _jsdecode(m.group(1))
+            try:
+                inner = _bs(decoded_html)
+                text = inner.get_text("\n", strip=True)
+                if text.strip():
+                    return text.strip()
+            except Exception:
+                pass
+
+    return _meta(html, "og:description")
+
+
+def _extract_wechat_cover(html: str, soup) -> str | None:
+    """Extract cover image URL from WeChat article.
+
+    Priority: og:image → first data-src img in #js_content.
+    Returns the raw WeChat CDN URL (qpic.cn / mmbiz).
+    """
+    og = _meta(html, "og:image")
+    if og:
+        return og
+
+    content_el = soup.select_one("#js_content")
+    if content_el:
+        img = content_el.find("img", attrs={"data-src": True})
+        if img:
+            return img["data-src"]
+    return None
 
 
 async def fetch_wechat_summary(url: str) -> dict:
@@ -138,9 +351,11 @@ async def fetch_wechat_summary(url: str) -> dict:
     html = ""
     try:
         async with httpx.AsyncClient(
-            timeout=20, follow_redirects=True, headers=headers
+            timeout=25, follow_redirects=True, headers=headers
         ) as client:
             r = await client.get(url)
+            if "text/html" not in r.headers.get("content-type", ""):
+                return _wechat_fallback(url, "非 HTML 页面")
             html = r.text
     except Exception as e:
         return _wechat_fallback(url, f"网络请求失败: {e}")
@@ -148,7 +363,6 @@ async def fetch_wechat_summary(url: str) -> dict:
     if not html:
         return _wechat_fallback(url, "页面内容为空")
 
-    # ── Parse with BeautifulSoup ────────────────────────────────
     try:
         soup = _bs(html)
     except Exception as e:
@@ -157,11 +371,10 @@ async def fetch_wechat_summary(url: str) -> dict:
     # Remove noise elements
     for sel in ["script", "style", "svg",
                 ".qr_code_pc_outer", ".tips_global", ".weapp_text_link",
-                "#js_pc_qr_code", ".rich_media_tool"]:
+                "#js_pc_qr_code", ".rich_media_tool", ".Reward", ".FollowButton"]:
         for el in soup.select(sel):
             el.decompose()
 
-    # ── Extract fields ──────────────────────────────────────────
     title = (
         _text(soup.select_one("#activity-name"))
         or _text(soup.select_one(".rich_media_title"))
@@ -176,30 +389,18 @@ async def fetch_wechat_summary(url: str) -> dict:
         or ""
     )
 
+    # #publish_time 有时是最后一个 .rich_media_meta_text
     pub_time = _text(soup.select_one("#publish_time")) or ""
+    if not pub_time:
+        metas = soup.select(".rich_media_meta_text")
+        if metas:
+            pub_time = _text(metas[-1])
 
-    # Cover image: og:image first, then first data-src image in content
-    og_image = _meta(html, "og:image") or None
-    if not og_image:
-        content_el = soup.select_one("#js_content")
-        if content_el:
-            img = content_el.find("img", attrs={"data-src": True})
-            if img:
-                og_image = img["data-src"]
-
-    # Extract plain text content (up to 2000 chars for AI)
-    content_el = soup.select_one("#js_content")
-    if content_el:
-        content_text = content_el.get_text("\n", strip=True)
-    else:
-        # Fallback: try og:description
-        content_text = _meta(html, "og:description") or ""
-
-    content_text = content_text[:2000].strip()
+    og_image = _extract_wechat_cover(html, soup)
+    content_text = _extract_wechat_content(html, soup)[:3000].strip()
 
     favicon_url = "https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico"
 
-    # ── AI summarization via GLM ────────────────────────────────
     if content_text:
         ai_result = await _ai_summarize_wechat(title, author, pub_time, content_text)
     else:

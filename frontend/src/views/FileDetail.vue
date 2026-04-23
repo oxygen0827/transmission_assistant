@@ -13,7 +13,7 @@
 
       <template v-else>
         <!-- Hero -->
-        <div class="hero gc" :class="{ 'hero-img': file.type === 'image' }">
+        <div class="hero gc" :class="{ 'hero-img': file.type === 'image' || (file.type === 'link' && file.og_image) }">
           <div class="hero-glow"></div>
           <!-- Image preview -->
           <template v-if="file.type === 'image'">
@@ -26,8 +26,19 @@
               />
             </div>
           </template>
+          <!-- Link cover image -->
+          <template v-else-if="file.type === 'link' && file.og_image">
+            <div class="hero-img-wrap">
+              <img
+                :src="imgUrl(file.og_image)"
+                class="hero-img-el"
+                loading="lazy"
+                @error="e => e.target.closest('.hero-img-wrap').innerHTML = '<span style=\'font-size:52px\'>🔗</span>'"
+              />
+            </div>
+          </template>
           <div v-else class="hero-icon">{{ typeIcon }}</div>
-          <div class="hero-name">{{ file.original_filename }}</div>
+          <div class="hero-name">{{ file.type === 'link' ? (file.summary || file.original_filename) : file.original_filename }}</div>
           <div class="hero-badges">
             <span class="type-chip" :class="file.type">{{ typeLabel }}</span>
             <span class="status-chip" :class="file.status">{{ statusLabel }}</span>
@@ -48,18 +59,34 @@
             <button class="action-link" @click="triggerAnalyze" :disabled="analyzing">重试</button>
           </div>
           <template v-else>
-            <div class="summary-text">{{ file.summary || '暂无简介' }}</div>
-            <div v-if="file.description" class="desc-text">{{ file.description }}</div>
+            <div v-if="file.type !== 'link'" class="summary-text">{{ file.summary || '暂无简介' }}</div>
+            <div class="desc-text">{{ file.description || (file.type === 'link' ? file.summary : '') || '暂无简介' }}</div>
+            <!-- WeChat read full article button -->
+            <button v-if="isWechat" class="read-btn" @click="loadArticle" :disabled="extracting">
+              <span v-if="extracting" class="read-btn-orb"></span>
+              <span>{{ extracting ? '正在提取正文…' : '📖 查看原文' }}</span>
+            </button>
           </template>
         </div>
 
-        <!-- Keywords -->
-        <div v-if="file.keywords?.length" class="info-card gc">
-          <div class="card-label">关键词</div>
-          <div class="kw-row">
-            <span v-for="kw in file.keywords" :key="kw" class="kw-tag">{{ kw }}</span>
+        <!-- Article markdown reader overlay -->
+        <transition name="slide-up">
+          <div v-if="showArticle" class="article-overlay">
+            <div class="article-hdr">
+              <button class="article-close" @click="showArticle = false">✕</button>
+              <span class="article-hdr-ttl">原文</span>
+              <span style="width:32px"></span>
+            </div>
+            <div class="article-meta" v-if="articleMeta">
+              <div class="article-title">{{ articleMeta.title }}</div>
+              <div class="article-byline">
+                <span v-if="articleMeta.author">{{ articleMeta.author }}</span>
+                <span v-if="articleMeta.pub_time">· {{ articleMeta.pub_time }}</span>
+              </div>
+            </div>
+            <div class="article-body md-content" v-html="renderedMd"></div>
           </div>
-        </div>
+        </transition>
 
         <!-- Highlights -->
         <div v-if="file.highlights?.length" class="info-card gc">
@@ -70,7 +97,7 @@
         </div>
 
         <!-- Link -->
-        <div v-if="file.url" class="info-card gc">
+        <div v-if="file.url && !isWechat" class="info-card gc">
           <div class="card-label">原始链接</div>
           <a :href="file.url" target="_blank" class="link-url">{{ file.url }}</a>
         </div>
@@ -98,16 +125,45 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getFile, analyzeFile, deleteFile } from '../api/files'
+import { marked } from 'marked'
+import { getFile, analyzeFile, deleteFile, extractContent, imgUrl } from '../api/files'
 
 const route = useRoute()
 const router = useRouter()
 const file = ref(null)
 const loading = ref(true)
 const analyzing = ref(false)
+const articleMd = ref('')
+const articleMeta = ref(null)
+const extracting = ref(false)
+const showArticle = ref(false)
 
-const ICONS  = { image:'🖼', video:'🎬', document:'📄', audio:'🎵', link:'🔗', other:'📦' }
-const LABELS = { image:'图片', video:'视频', document:'文档', audio:'音频', link:'链接', other:'其他' }
+marked.setOptions({ breaks: true, gfm: true })
+
+const isWechat = computed(() => {
+  const url = file.value?.url || ''
+  return file.value?.type === 'link' && (url.includes('mp.weixin.qq.com') || url.includes('weixin.qq.com'))
+})
+
+const renderedMd = computed(() => articleMd.value ? marked.parse(articleMd.value) : '')
+
+async function loadArticle() {
+  if (articleMd.value) { showArticle.value = true; return }
+  extracting.value = true
+  try {
+    const res = await extractContent(file.value.id)
+    articleMeta.value = res
+    articleMd.value = res.markdown
+    showArticle.value = true
+  } catch (e) {
+    alert(e.response?.data?.detail || '提取失败，请稍后重试')
+  } finally {
+    extracting.value = false
+  }
+}
+
+const ICONS  = { image:'🖼', video:'🎬', document:'📄', audio:'🎵', link:'🔗', text:'💬', other:'📦' }
+const LABELS = { image:'图片', video:'视频', document:'文档', audio:'音频', link:'链接', text:'文字', other:'其他' }
 const SLABELS = { pending:'分析中', ready:'已完成', failed:'分析失败' }
 
 const typeIcon   = computed(() => ICONS[file.value?.type]   || '📦')
@@ -171,7 +227,7 @@ onMounted(load)
 
 .app-body {
   flex: 1; overflow-y: auto;
-  padding: 14px 16px 32px;
+  padding: 14px 16px 48px;
   display: flex; flex-direction: column; gap: 10px;
   position: relative; z-index: 1;
 }
@@ -305,4 +361,81 @@ onMounted(load)
 }
 .btn-secondary:active { transform: scale(.97); }
 .btn-secondary:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Read article button */
+.read-btn {
+  margin-top: 12px; width: 100%; height: 40px; border-radius: 12px;
+  background: var(--accent-s); border: 1.5px solid rgba(139,114,255,.3);
+  color: var(--accent); font-size: 14px; font-weight: 600;
+  font-family: inherit; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 6px;
+  transition: transform .15s, background .15s;
+}
+.read-btn:active { transform: scale(.97); }
+.read-btn:disabled { opacity: .5; cursor: not-allowed; }
+.read-btn-orb {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid rgba(139,114,255,.3);
+  border-top-color: var(--accent);
+  animation: spin .8s linear infinite; flex-shrink: 0;
+}
+
+/* Article overlay */
+.article-overlay {
+  position: absolute; inset: 0; z-index: 100;
+  background: var(--bg); display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.article-hdr {
+  flex-shrink: 0; height: 52px;
+  display: flex; align-items: center; padding: 0 16px; gap: 8px;
+  background: var(--bg-blur); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.article-close {
+  width: 32px; height: 32px; border: none; background: none;
+  color: var(--text2); font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.article-hdr-ttl { flex: 1; text-align: center; font-size: 15px; font-weight: 700; color: var(--text); }
+.article-meta {
+  flex-shrink: 0; padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.article-title { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.4; margin-bottom: 8px; }
+.article-byline { font-size: 12px; color: var(--text3); display: flex; gap: 6px; }
+.article-body { flex: 1; overflow-y: auto; padding: 16px 18px 40px; }
+
+/* Markdown content styles */
+.md-content { color: var(--text); font-size: 15px; line-height: 1.8; }
+.md-content :deep(h1) { font-size: 20px; font-weight: 800; margin: 20px 0 10px; color: var(--text); }
+.md-content :deep(h2) { font-size: 17px; font-weight: 700; margin: 18px 0 8px; color: var(--text); }
+.md-content :deep(h3) { font-size: 15px; font-weight: 700; margin: 14px 0 6px; color: var(--text); }
+.md-content :deep(p) { margin: 0 0 12px; color: var(--text2); }
+.md-content :deep(strong) { color: var(--text); font-weight: 700; }
+.md-content :deep(em) { color: var(--text2); }
+.md-content :deep(a) { color: var(--accent); text-decoration: none; }
+.md-content :deep(a:hover) { text-decoration: underline; }
+.md-content :deep(img) { max-width: 100%; border-radius: 8px; margin: 10px 0; display: block; }
+.md-content :deep(blockquote) {
+  border-left: 3px solid var(--accent); padding: 6px 12px;
+  margin: 12px 0; background: var(--s2); border-radius: 0 8px 8px 0;
+  color: var(--text2); font-size: 14px;
+}
+.md-content :deep(ul), .md-content :deep(ol) { padding-left: 20px; margin: 8px 0; }
+.md-content :deep(li) { margin: 4px 0; color: var(--text2); }
+.md-content :deep(code) {
+  background: var(--s3); border-radius: 4px; padding: 1px 5px;
+  font-family: monospace; font-size: 13px; color: var(--teal);
+}
+.md-content :deep(pre) {
+  background: var(--s3); border-radius: 8px; padding: 12px;
+  overflow-x: auto; margin: 12px 0;
+}
+.md-content :deep(pre code) { background: none; padding: 0; color: var(--text2); }
+.md-content :deep(hr) { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* Slide up transition */
+.slide-up-enter-active, .slide-up-leave-active { transition: transform .35s cubic-bezier(.32,.72,0,1); }
+.slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); }
 </style>

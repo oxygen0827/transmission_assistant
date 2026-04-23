@@ -14,6 +14,7 @@ async def upload_file(
     background_tasks: BackgroundTasks,
     file: Optional[UploadFile] = File(None),
     url: Optional[str] = Form(None),
+    text: Optional[str] = Form(None),
     analyze_now: bool = Form(False),
 ):
     if file:
@@ -26,6 +27,9 @@ async def upload_file(
         if not url.startswith(("http://", "https://")):
             raise HTTPException(400, "请输入有效的链接地址")
         meta = storage.save_link(url)
+    elif text:
+        meta = storage.save_text(text.strip())
+        return {"id": meta.id, "status": meta.status, "created_at": meta.created_at, "type": meta.type}
     else:
         raise HTTPException(400, "请上传文件或提供链接")
 
@@ -146,6 +150,22 @@ async def trigger_analyze(file_id: str):
         raise HTTPException(404, "文件不存在")
     meta = await analyzer.analyze_file(meta)
     return {"id": meta.id, "status": meta.status, "summary": meta.summary}
+
+
+@router.get("/{file_id}/extract")
+async def extract_content(file_id: str):
+    meta = storage.get_file_by_id(file_id)
+    if not meta:
+        raise HTTPException(404, "文件不存在")
+    if meta.type.value != "link" or not meta.url:
+        raise HTTPException(400, "仅支持链接类型")
+    from backend.services.url_classifier import classify_url, extract_wechat_markdown
+    if classify_url(meta.url) != "wechat":
+        raise HTTPException(400, "仅支持微信公众号链接")
+    result = await extract_wechat_markdown(meta.url)
+    if "error" in result:
+        raise HTTPException(502, result["error"])
+    return result
 
 
 @router.get("/{file_id}/download")

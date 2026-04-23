@@ -18,6 +18,13 @@ export async function uploadLink(url, analyzeNow = false) {
   return data
 }
 
+export async function uploadText(text) {
+  const form = new FormData()
+  form.append('text', text)
+  const { data } = await api.post('/files/upload', form)
+  return data
+}
+
 export async function getFiles(params = {}) {
   const { data } = await api.get('/files', { params })
   return data
@@ -35,6 +42,11 @@ export async function deleteFile(id) {
 
 export async function analyzeFile(id) {
   const { data } = await api.post(`/files/${id}/analyze`)
+  return data
+}
+
+export async function extractContent(id) {
+  const { data } = await api.get(`/files/${id}/extract`)
   return data
 }
 
@@ -58,4 +70,12 @@ export async function getFilesByDate(date) {
 
 export function downloadUrl(id) {
   return `/api/files/${id}/download`
+}
+
+// Proxy WeChat CDN images through backend to bypass hotlink protection
+export function imgUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('/api/')) return url
+  const needsProxy = ['qpic.cn', 'mmbiz', 'weixin'].some(k => url.includes(k))
+  return needsProxy ? `/api/image-proxy?url=${encodeURIComponent(url)}` : url
 }

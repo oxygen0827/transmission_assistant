@@ -11,6 +11,7 @@ class FileType(str, Enum):
     document = "document"
     audio = "audio"
     link = "link"
+    text = "text"
     other = "other"
 
 
